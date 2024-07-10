@@ -1,18 +1,12 @@
+
 import { Router } from "express";
+import AuthController from "../controllers/auth";
 
 const routerAuth = Router();
+const controller = new AuthController();
 
-routerAuth.get("/", (req, res) => {
-    res.json({
-        accessToken: "abcdef"
-    })
-})
 
-routerAuth.post("/login", (req, res) => {
-    console.log(req.body);
-    res.json({
-        "mess": "done",
-    })
-})
+routerAuth.get("/test", controller.get);
+routerAuth.post("/login", controller.login);
 
 export default routerAuth;

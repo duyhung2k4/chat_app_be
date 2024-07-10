@@ -1,6 +1,9 @@
 import express from "express";
 import router from "./routers";
 import bodyParser from "body-parser";
+import { init } from "./config/init";
+
+init();
 
 const app = express();
 const port = 3000;

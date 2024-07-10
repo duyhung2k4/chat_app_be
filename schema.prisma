@@ -12,8 +12,8 @@ model roles {
     users users[]
 
     created_at DateTime @default(now())
-    updated_at DateTime @updatedAt
-    delete_at DateTime
+    updated_at DateTime? @updatedAt
+    delete_at DateTime?
 }
 
 model users {
@@ -28,8 +28,8 @@ model users {
     profile profiles?
 
     created_at DateTime @default(now())
-    updated_at DateTime @updatedAt
-    delete_at DateTime
+    updated_at DateTime? @updatedAt
+    delete_at DateTime?
 }
 
 model profiles {
@@ -46,6 +46,6 @@ model profiles {
     user users @relation(fields: [user_id], references: [id])
 
     created_at DateTime @default(now())
-    updated_at DateTime @updatedAt
-    delete_at DateTime
+    updated_at DateTime? @updatedAt
+    delete_at DateTime?
 }

@@ -11,11 +11,7 @@
        "emitDecoratorMetadata": true,
        "esModuleInterop": true,
        "experimentalDecorators": true,
-       "sourceMap": true,
-        "baseUrl": ".",
-        "paths": {
-            "@/*": ["src/*"]
-        },
+       "sourceMap": true
     },
     "include": ["src/**/*.ts"],
     "exclude": ["node_modules", "**/*.spec.ts"],
