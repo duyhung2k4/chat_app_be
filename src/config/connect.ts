@@ -1,4 +1,5 @@
 import { Client } from "pg";
+import { createClient } from "redis";
 
 export const clientPg = new Client({
     user: "postgres",
@@ -8,9 +9,20 @@ export const clientPg = new Client({
     host: "192.168.31.101",
 });
 
+export const clientRedis = createClient();
+export type RedisClient = typeof clientRedis;
+
 export const connectPg = async () => {
     try {
         await clientPg.connect();
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+export const connectRedis = async () => {
+    try {
+        await clientRedis.connect();
     } catch (error) {
         console.log(error);
     }

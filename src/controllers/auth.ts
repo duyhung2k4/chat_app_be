@@ -1,33 +1,89 @@
 import { Request, Response } from "express";
-import { Client } from "pg";
-import { clientPg } from "../config/connect";
 import AuthService from "../services/auth";
+import JwtUtils from "../utils/jwt";
 
 class AuthController {
-    private clientPg: Client
     private authService: AuthService
+    private jwtUtils: JwtUtils
 
     constructor() {
-        this.clientPg = clientPg;
         this.authService = new AuthService();
+        this.jwtUtils = new JwtUtils();
 
-        this.login = this.login.bind(this);
+        this.SignIn = this.SignIn.bind(this);
+        this.AcceptCode = this.AcceptCode.bind(this);
+        this.Login = this.Login.bind(this);
     }
 
-    async login(req: Request, res: Response) {
-        try {            
+    async SignIn(req: Request, res: Response) {
+        try {
             const data: { email: string, password: string } = req.body;
-            const result = await this.authService.checkUser(data.email);
-            res.json(result);
-        } catch (error) {            
+
+            const resultCheckUser = await this.authService.CheckUser(data.email);
+            if (resultCheckUser instanceof Error) {
+                res.json(resultCheckUser);
+                return;
+            }
+            if (resultCheckUser) {
+                res.json({
+                    mess: "email exist"
+                });
+                return;
+            }
+
+            const resultSetRedisUserPending = await this.authService.CreatePendingUser(data.email, data.password);
+
+            res.json({
+                mess: resultSetRedisUserPending,
+            });
+        } catch (error) {
             res.json(error);
         }
     }
-    
-    async get(req: Request, res: Response) {
-        res.json({
-            "mess": "done",
-        })
+
+    async AcceptCode(req: Request, res: Response) {
+        try {
+            const { email, code }: { email: string, code: string } = req.body;
+            const resultAccept = await this.authService.AcceptCode(email, code);
+            if (resultAccept instanceof Error) {
+                res.json(resultAccept);
+                return;
+            }
+
+            const resultProfile = await this.authService.CreateProfile(email, resultAccept);
+            if (resultProfile instanceof Error) {
+                res.json(resultProfile);
+                return;
+            }
+
+            res.json({
+                mess: resultProfile,
+            });
+        } catch (error) {
+            res.json(error);
+        }
+    }
+
+    async Login(req: Request, res: Response) {
+        try {
+            const infoLogin: { email: string, password: string } = req.body;
+            const result = await this.authService.CheckUserLogin(infoLogin);
+
+            if(result instanceof Error) {
+                res.json(result);
+                return;
+            }
+
+            const token = this.jwtUtils.CreateToken({
+                profile_id: result.id,
+                role_id: result?.user?.role.id,
+                email: result.email
+            }, "access_token");
+
+            res.json(token);
+        } catch (error) {
+            res.json(error);
+        }
     }
 }
 

@@ -6,7 +6,8 @@ const routerAuth = Router();
 const controller = new AuthController();
 
 
-routerAuth.get("/test", controller.get);
-routerAuth.post("/login", controller.login);
+routerAuth.post("/accept-code", controller.AcceptCode);
+routerAuth.post("/sign-in", controller.SignIn);
+routerAuth.post("/login", controller.Login);
 
 export default routerAuth;
