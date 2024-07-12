@@ -15,12 +15,12 @@ class AuthMiddleware {
             const token = req.headers.authorization.split(" ")[1]
             const result = await this.jwtUtils.VerifyToken(token);
             if(result instanceof Error) {
-                res.json(result);
+                res.status(401).json(result);
                 return;
             }
             next();
         } catch (error) {
-            res.json(error);
+            res.status(502).json(error);
         }
     }
 }

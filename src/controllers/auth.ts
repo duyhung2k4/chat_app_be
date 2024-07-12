@@ -1,14 +1,18 @@
-import { Request, Response } from "express";
 import AuthService from "../services/auth";
 import JwtUtils from "../utils/jwt";
+import { EventEmitter } from "node:events";
+import { Request, Response } from "express";
+import testEvent from "../events/test";
 
 class AuthController {
     private authService: AuthService
     private jwtUtils: JwtUtils
+    private testEvent: EventEmitter
 
     constructor() {
         this.authService = new AuthService();
         this.jwtUtils = new JwtUtils();
+        this.testEvent = testEvent.GetEvent();
 
         this.SignIn = this.SignIn.bind(this);
         this.AcceptCode = this.AcceptCode.bind(this);
@@ -85,6 +89,8 @@ class AuthController {
                 role_id: result?.user?.role.id,
                 email: result.email
             }, "refresh_token");
+
+            this.testEvent.emit("test_1", result);
 
             res.json({
                 access_token,
