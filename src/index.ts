@@ -11,7 +11,7 @@ const port = 3000;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use("/", router);
+app.use("/api/v1/", router);
 
 app.listen(port, () => {
     return console.log(`Express is listening at http://localhost:${port}`);

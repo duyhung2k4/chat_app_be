@@ -74,13 +74,23 @@ class AuthController {
                 return;
             }
 
-            const token = this.jwtUtils.CreateToken({
+            const access_token = this.jwtUtils.CreateToken({
                 profile_id: result.id,
                 role_id: result?.user?.role.id,
                 email: result.email
             }, "access_token");
 
-            res.json(token);
+            const refresh_token = this.jwtUtils.CreateToken({
+                profile_id: result.id,
+                role_id: result?.user?.role.id,
+                email: result.email
+            }, "refresh_token");
+
+            res.json({
+                access_token,
+                refresh_token,
+                result,
+            });
         } catch (error) {
             res.json(error);
         }
