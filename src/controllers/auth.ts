@@ -18,6 +18,7 @@ class AuthController {
         this.Register = this.Register.bind(this);
         this.AcceptCode = this.AcceptCode.bind(this);
         this.Login = this.Login.bind(this);
+        this.GetTimeCodePending = this.GetTimeCodePending.bind(this);
     }
 
     async Register(req: Request, res: Response) {
@@ -26,23 +27,40 @@ class AuthController {
 
             const resultCheckUser = await this.authService.CheckUser(data.email);
             if (resultCheckUser instanceof Error) {
-                res.json(resultCheckUser);
+                res.status(502).json(resultCheckUser);
                 return;
             }
             if (resultCheckUser) {
-                res.json({
+                res.status(502).json({
                     mess: "email exist"
                 });
                 return;
             }
 
-            const resultSetRedisUserPending = await this.authService.CreatePendingUser(data.email, data.password);
+            const resultSetRedisUserPending = await this.authService.CreatePendingUser(data);
 
-            res.json({
+            res.status(200).json({
                 mess: resultSetRedisUserPending,
             });
         } catch (error) {
             res.json(error);
+        }
+    }
+
+    async GetTimeCodePending(req: Request, res: Response) {
+        try {
+            const { email }: {email: string} = req.params as { email: string };
+            const dataTime = await this.authService.GetTimeCodePending(email);
+            if(dataTime instanceof Error) {
+                res.status(502).json(dataTime);
+                return;
+            }
+
+            res.status(200).json({
+                dataTime,
+            });
+        } catch (error) {
+            res.status(502).json(error);
         }
     }
 
@@ -51,21 +69,21 @@ class AuthController {
             const { email, code }: { email: string, code: string } = req.body;
             const resultAccept = await this.authService.AcceptCode(email, code);
             if (resultAccept instanceof Error) {
-                res.json(resultAccept);
+                res.status(502).json(resultAccept);
                 return;
             }
 
             const resultProfile = await this.authService.CreateProfile(email, resultAccept);
             if (resultProfile instanceof Error) {
-                res.json(resultProfile);
+                res.status(502).json(resultProfile);
                 return;
             }
 
-            res.json({
+            res.status(200).json({
                 mess: resultProfile,
             });
         } catch (error) {
-            res.json(error);
+            res.status(502).json(error);
         }
     }
 
@@ -75,7 +93,7 @@ class AuthController {
             const result = await this.authService.CheckUserLogin(infoLogin);
 
             if(result instanceof Error) {
-                res.json(result);
+                res.status(502).json(result);
                 return;
             }
 
@@ -93,13 +111,13 @@ class AuthController {
 
             this.testEvent.emit("test_1", result);
 
-            res.json({
+            res.status(200).json({
                 access_token,
                 refresh_token,
                 result,
             });
         } catch (error) {
-            res.json(error);
+            res.status(502).json(error);
         }
     }
 }

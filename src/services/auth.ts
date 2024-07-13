@@ -7,6 +7,8 @@ import { TABLE } from "../constants/query";
 import { emailTransporter, EmailTransporter } from "../config/email";
 import { ProfileModel } from "../models/profile";
 import { COLUMN_TABLE } from "../constants/table";
+import { RegisterRequest } from "../dto/request/auth";
+import dayjs, { Dayjs } from "dayjs";
 
 
 class AuthService {
@@ -46,16 +48,19 @@ class AuthService {
         }
     }
 
-    async CreatePendingUser(email: string, password: string): Promise<any | Error> {
+    async CreatePendingUser(payload: RegisterRequest): Promise<any | Error> {
         try {
             const code: string = `${Math.floor(100000 + Math.random() * 900000)}`;
 
+            const data: TypeRedisCreatePendingUser = {
+                data: payload,
+                code,
+                ex: dayjs().add(30, "second"),
+            }
+
             await this.clientRedis.set(
-                `sign_in_${email}`,
-                JSON.stringify({
-                    data: { email, password },
-                    code,
-                }),
+                `sign_in_${payload.email}`,
+                JSON.stringify(data),
                 {
                     EX: 30,
                     NX: true,
@@ -64,7 +69,7 @@ class AuthService {
 
             await this.clientEmail.sendMail({
                 from: "D.Hung",
-                to: email,
+                to: payload.email,
                 subject: "Mã xác nhận",
                 text: code,
             });
@@ -177,6 +182,16 @@ class AuthService {
         }
     }
 
+    async GetTimeCodePending(email: string): Promise<Date | Error> {
+        try {
+            const stringData = await this.clientRedis.get(email);
+            const infoPending = JSON.parse(stringData) as TypeRedisCreatePendingUser;
+            return infoPending.ex.toDate();
+        } catch (error) {
+            return error;
+        }
+    }
+
     private async getRole(): Promise<number | null> {
         try {
             const queryConfig: QueryConfig = {
@@ -192,6 +207,12 @@ class AuthService {
             return null
         }
     }
+}
+
+export type TypeRedisCreatePendingUser = {
+    data: RegisterRequest
+    code: string
+    ex: Dayjs
 }
 
 export default AuthService;
