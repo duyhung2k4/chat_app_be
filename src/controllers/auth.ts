@@ -3,6 +3,7 @@ import JwtUtils from "../utils/jwt";
 import { EventEmitter } from "node:events";
 import { Request, Response } from "express";
 import testEvent from "../events/test";
+import { RegisterRequest } from "../dto/request/auth";
 
 class AuthController {
     private authService: AuthService
@@ -14,14 +15,14 @@ class AuthController {
         this.jwtUtils = new JwtUtils();
         this.testEvent = testEvent.GetEvent();
 
-        this.SignIn = this.SignIn.bind(this);
+        this.Register = this.Register.bind(this);
         this.AcceptCode = this.AcceptCode.bind(this);
         this.Login = this.Login.bind(this);
     }
 
-    async SignIn(req: Request, res: Response) {
+    async Register(req: Request, res: Response) {
         try {
-            const data: { email: string, password: string } = req.body;
+            const data: RegisterRequest = req.body;
 
             const resultCheckUser = await this.authService.CheckUser(data.email);
             if (resultCheckUser instanceof Error) {

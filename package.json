@@ -25,6 +25,7 @@
     "dependencies": {
         "@prisma/client": "^5.16.2",
         "@types/bcrypt": "^5.0.2",
+        "@types/cors": "^2.8.17",
         "@types/dotenv": "^8.2.0",
         "@types/jsonwebtoken": "^9.0.6",
         "@types/morgan": "^1.9.9",
@@ -35,6 +36,7 @@
         "@types/ws": "^8.5.10",
         "bcrypt": "^5.1.1",
         "body-parser": "^1.20.2",
+        "cors": "^2.8.5",
         "dotenv": "^16.4.5",
         "jsonwebtoken": "^9.0.2",
         "module-alias": "^2.2.3",

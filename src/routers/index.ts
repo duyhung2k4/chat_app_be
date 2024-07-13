@@ -6,7 +6,7 @@ import AuthMiddleware from "../middlewares/auth";
 const router = Router();
 const authMiddleware = new AuthMiddleware();
 
-router.use("/auth", routerAuth);
-router.use("/room", authMiddleware.VerifyToken, routerRoom);
+router.use("/api/v1/public/auth", routerAuth);
+router.use("/api/v1/public/room", authMiddleware.VerifyToken, routerRoom);
 
 export default router;
