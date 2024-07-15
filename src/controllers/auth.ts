@@ -1,24 +1,26 @@
 import AuthService from "../services/auth";
 import JwtUtils from "../utils/jwt";
-import { EventEmitter } from "node:events";
 import { Request, Response } from "express";
-import testEvent from "../events/test";
 import { RegisterRequest } from "../dto/request/auth";
+import { HandleResponse } from "./http";
+import dayjs from "dayjs";
+import { clientRedis, RedisClient } from "../config/connect";
 
 class AuthController {
     private authService: AuthService
     private jwtUtils: JwtUtils
-    private testEvent: EventEmitter
+    private handleResponse: HandleResponse
 
     constructor() {
         this.authService = new AuthService();
         this.jwtUtils = new JwtUtils();
-        this.testEvent = testEvent.GetEvent();
+        this.handleResponse = new HandleResponse();
 
         this.Register = this.Register.bind(this);
         this.AcceptCode = this.AcceptCode.bind(this);
         this.Login = this.Login.bind(this);
         this.GetTimeCodePending = this.GetTimeCodePending.bind(this);
+        this.SendRepeatCode = this.SendRepeatCode.bind(this);
     }
 
     async Register(req: Request, res: Response) {
@@ -27,21 +29,17 @@ class AuthController {
 
             const resultCheckUser = await this.authService.CheckUser(data.email);
             if (resultCheckUser instanceof Error) {
-                res.status(502).json(resultCheckUser);
+                this.handleResponse.ErrorResponse(res, resultCheckUser);
                 return;
             }
             if (resultCheckUser) {
-                res.status(502).json({
-                    mess: "email exist"
-                });
+                this.handleResponse.ErrorResponse(res, new Error("email exist"));
                 return;
             }
 
             const resultSetRedisUserPending = await this.authService.CreatePendingUser(data);
 
-            res.status(200).json({
-                mess: resultSetRedisUserPending,
-            });
+            this.handleResponse.SuccessResponse(res, resultSetRedisUserPending);
         } catch (error) {
             res.json(error);
         }
@@ -49,18 +47,16 @@ class AuthController {
 
     async GetTimeCodePending(req: Request, res: Response) {
         try {
-            const { email }: {email: string} = req.params as { email: string };
-            const dataTime = await this.authService.GetTimeCodePending(email);
-            if(dataTime instanceof Error) {
-                res.status(502).json(dataTime);
+            const { email }: { email: string } = req.query as { email: string };
+            const data = await this.authService.GetDataCodePending(email);
+            if(data instanceof Error) {
+                this.handleResponse.ErrorResponse(res, data);
                 return;
             }
 
-            res.status(200).json({
-                dataTime,
-            });
+            this.handleResponse.SuccessResponse(res, { dataTime: dayjs(data.ex).toDate() });
         } catch (error) {
-            res.status(502).json(error);
+            this.handleResponse.ErrorResponse(res, error);
         }
     }
 
@@ -68,22 +64,21 @@ class AuthController {
         try {
             const { email, code }: { email: string, code: string } = req.body;
             const resultAccept = await this.authService.AcceptCode(email, code);
+
             if (resultAccept instanceof Error) {
-                res.status(502).json(resultAccept);
+                this.handleResponse.ErrorResponse(res, resultAccept);
                 return;
             }
 
             const resultProfile = await this.authService.CreateProfile(email, resultAccept);
             if (resultProfile instanceof Error) {
-                res.status(502).json(resultProfile);
+                this.handleResponse.ErrorResponse(res, resultProfile);
                 return;
             }
 
-            res.status(200).json({
-                mess: resultProfile,
-            });
+            this.handleResponse.SuccessResponse(res, resultProfile);
         } catch (error) {
-            res.status(502).json(error);
+            this.handleResponse.ErrorResponse(res, error);
         }
     }
 
@@ -93,7 +88,7 @@ class AuthController {
             const result = await this.authService.CheckUserLogin(infoLogin);
 
             if(result instanceof Error) {
-                res.status(502).json(result);
+                this.handleResponse.ErrorResponse(res, result);
                 return;
             }
 
@@ -109,15 +104,36 @@ class AuthController {
                 email: result.email
             }, "refresh_token");
 
-            this.testEvent.emit("test_1", result);
-
-            res.status(200).json({
+            this.handleResponse.SuccessResponse(res, {
                 access_token,
                 refresh_token,
                 result,
             });
         } catch (error) {
-            res.status(502).json(error);
+            this.handleResponse.ErrorResponse(res, error);
+        }
+    }
+
+    async SendRepeatCode(req: Request, res: Response) {
+        try {
+            const { email }: { email: string } = req.body as { email: string };
+            const dataPending = await this.authService.GetDataCodePending(email);
+
+            if(dataPending instanceof Error) {
+                this.handleResponse.ErrorResponse(res, dataPending);
+                return;
+            }
+
+
+            const createUserPending = await this.authService.CreatePendingUser(dataPending.data);
+            if(createUserPending instanceof Error) {
+                this.handleResponse.ErrorResponse(res, createUserPending);
+                return;
+            }
+
+            this.handleResponse.SuccessResponse(res, null);
+        } catch (error) {
+            this.handleResponse.ErrorResponse(res, error);
         }
     }
 }

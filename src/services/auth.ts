@@ -29,6 +29,7 @@ class AuthService {
         this.CreatePendingUser = this.CreatePendingUser.bind(this);
         this.CreateProfile = this.CreateProfile.bind(this);
         this.CheckUserLogin = this.CheckUserLogin.bind(this);
+        this.GetDataCodePending = this.GetDataCodePending.bind(this);
 
         this.getRole = this.getRole.bind(this);
     }
@@ -58,11 +59,13 @@ class AuthService {
                 ex: dayjs().add(30, "second"),
             }
 
+            await this.clientRedis.del(`sign_in_${payload.email}`);
+
             await this.clientRedis.set(
                 `sign_in_${payload.email}`,
                 JSON.stringify(data),
                 {
-                    EX: 30,
+                    EX: 60,
                     NX: true,
                 }
             );
@@ -83,7 +86,7 @@ class AuthService {
     async AcceptCode(email: string, code: string): Promise<string | Error> {
         try {
             const jsonStringData = await clientRedis.get(`sign_in_${email}`);
-            const data = JSON.parse(jsonStringData);
+            const data = JSON.parse(jsonStringData) as TypeRedisCreatePendingUser;
 
             if (!data || data?.code !== code) return null;
 
@@ -96,6 +99,9 @@ class AuthService {
 
     async CreateProfile(email: string, passwordHash: string): Promise<ProfileModel | Error> {
         try {
+            const infoUserPendingString = await this.clientRedis.get(`sign_in_${email}`);
+            const infoUserPending = JSON.parse(infoUserPendingString) as TypeRedisCreatePendingUser;
+
             await this.clientPg.query("BEGIN");
             const id = await this.getRole();
             if (id === null) return null;
@@ -108,12 +114,20 @@ class AuthService {
             const newUser = resultUser.rows[0];
 
             const queryConfigProfile: QueryConfig = {
-                text: `INSERT INTO profiles (email, user_id) values ($1, $2) RETURNING *`,
-                values: [email, newUser.id],
+                text: `INSERT INTO profiles (first_name, last_name, email, user_id) values ($1, $2, $3, $4) RETURNING *`,
+                values: [
+                    infoUserPending.data.firstName,
+                    infoUserPending.data.lastName,
+                    email, 
+                    newUser.id
+                ],
             }
             const resultProfile = await this.clientPg.query<ProfileModel>(queryConfigProfile);
 
             await this.clientPg.query("COMMIT");
+
+            this.clientRedis.del(`sign_in_${resultProfile.rows[0].email}`);
+
             return resultProfile.rows[0];
         } catch (error) {
             await this.clientPg.query("ROLLBACK");
@@ -136,7 +150,11 @@ class AuthService {
                     FROM profiles as p
                     JOIN users as u ON u.id = p.user_id
                     JOIN roles as r ON r.id = u.role_id
-                    WHERE u.email = $1
+                    WHERE 
+                        u.email = $1 
+                        AND p.deleted_at IS NULL
+                        AND u.deleted_at IS NULL
+                        AND r.deleted_at IS NULL
                 `,
                 values: [infoLogin.email],
             };
@@ -182,11 +200,11 @@ class AuthService {
         }
     }
 
-    async GetTimeCodePending(email: string): Promise<Date | Error> {
+    async GetDataCodePending(email: string): Promise<TypeRedisCreatePendingUser | Error> {
         try {
-            const stringData = await this.clientRedis.get(email);
+            const stringData = await this.clientRedis.get(`sign_in_${email}`);
             const infoPending = JSON.parse(stringData) as TypeRedisCreatePendingUser;
-            return infoPending.ex.toDate();
+            return infoPending;
         } catch (error) {
             return error;
         }
@@ -195,7 +213,7 @@ class AuthService {
     private async getRole(): Promise<number | null> {
         try {
             const queryConfig: QueryConfig = {
-                text: "SELECT id FROM roles WHERE code = $1",
+                text: "SELECT id FROM roles WHERE code = $1 AND deleted_at IS NULL",
                 values: ["user"]
             }
 
