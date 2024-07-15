@@ -33,6 +33,7 @@ export type TokenInfoPayload = {
     profile_id: number
     role_id: number
     email: string
+    uuid: string
 }
 
 export type TokenInfoResult = TokenInfoPayload & {

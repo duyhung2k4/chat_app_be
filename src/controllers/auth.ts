@@ -1,10 +1,11 @@
 import AuthService from "../services/auth";
 import JwtUtils from "../utils/jwt";
+import dayjs from "dayjs";
+
+import { v4 as uuidv4 } from "uuid";
 import { Request, Response } from "express";
 import { RegisterRequest } from "../dto/request/auth";
 import { HandleResponse } from "./http";
-import dayjs from "dayjs";
-import { clientRedis, RedisClient } from "../config/connect";
 
 class AuthController {
     private authService: AuthService
@@ -95,13 +96,15 @@ class AuthController {
             const access_token = this.jwtUtils.CreateToken({
                 profile_id: result.id,
                 role_id: result?.user?.role.id,
-                email: result.email
+                email: result.email,
+                uuid: uuidv4().toString(),
             }, "access_token");
 
             const refresh_token = this.jwtUtils.CreateToken({
                 profile_id: result.id,
                 role_id: result?.user?.role.id,
-                email: result.email
+                email: result.email,
+                uuid: uuidv4().toString(),
             }, "refresh_token");
 
             this.handleResponse.SuccessResponse(res, {
